@@ -3,13 +3,12 @@ dotenv.config();
 import nodemailer from "nodemailer";
 
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: process.env.SMTP_SERVER || 'smtp.gmail.com',
+  port: process.env.SMTP_PORT || 587,
+  secure: process.env.SMTP_PORT == 465, // true for 465, false for other ports
   auth: {
-    type: 'OAuth2',
-    user: process.env.EMAIL_USER,
-    clientId: process.env.CLIENT_ID,
-    clientSecret: process.env.CLIENT_SECRET,
-    refreshToken: process.env.REFRESH_TOKEN,
+    user: process.env.SMTP_USERNAME || process.env.EMAIL_USER,
+    pass: process.env.SMTP_PASSWORD, 
   },
 });
 
@@ -24,7 +23,7 @@ transporter.verify((error, success) => {
 
 export async function sendEmail({ to, subject, html, text }) {
     const mailOptions = {
-        from: process.env.EMAIL_USER,
+        from: `"${process.env.SMTP_FROM_NAME || 'BrainBlitz'}" <${process.env.SMTP_FROM_EMAIL || process.env.SMTP_USERNAME}>`,
         to,
         subject,
         html,
