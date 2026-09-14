@@ -39,6 +39,8 @@ export const registerController = asyncHandler(async (req, res) => {
     { expiresIn: "15m" }
   );
 
+    await verifyEmail(user ,actionToken )
+
   const createdUser = await userModel.findById(user._id).select("-password").lean();
   createdUser.actionToken = actionToken;
 
@@ -304,7 +306,7 @@ export const googleAuthController = asyncHandler(async (req, res) => {
     await user.save();
   }
   
-  
+
 
   const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET_KEY, {
     expiresIn: "7d",
