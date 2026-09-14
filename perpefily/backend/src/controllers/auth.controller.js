@@ -219,10 +219,10 @@ export const loginController = asyncHandler(async (req, res) => {
     { expiresIn: "30d" },
   );
 
-  res.cookie("token", token, {
+ res.cookie("token", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     maxAge: 30 * 24 * 60 * 60 * 1000,
   });
 
@@ -237,10 +237,10 @@ export const loginController = asyncHandler(async (req, res) => {
 
 export const logoutController = async (req, res) => {
   try {
-    res.clearCookie("token", {
+   res.clearCookie("token", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     });
     return res
       .status(200)
@@ -307,11 +307,11 @@ export const googleAuthController = asyncHandler(async (req, res) => {
     expiresIn: "7d",
   });
 
-  res.cookie("token", token, {
+res.cookie("token", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 7 * 24 * 60 * 60 * 1000,
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    maxAge: 30 * 24 * 60 * 60 * 1000,
   });
   res.redirect(process.env.FRONTED_URL + "/");
 });
