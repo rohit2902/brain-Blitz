@@ -93,10 +93,13 @@ passport.use(new GoogleStrategy(
   }
 ));
 
-app.get("*name", (req, res) => {
-  res.sendFile(
-    path.join(__dirname, "..", "public", "index.html")
-  );
+app.get("/", (req, res) => {
+  res.json({ success: true, message: "Welcome to BrainBlitz API" });
+});
+
+// Handle undefined routes
+app.use("*", (req, res) => {
+  res.status(404).json({ success: false, message: "API Route Not Found" });
 });
 
 app.use(errorHandler);
