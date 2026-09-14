@@ -49,23 +49,21 @@ export const registerController = asyncHandler(async (req, res) => {
     { expiresIn: "15m" }
   );
 
-  try {
-    console.log(`[REGISTER] 📨 SEND EMAIL START -> Recipient email: ${user.email}`);
-    const htmlTemplate = verifyEmailTemplate(user, emailVerifyToken);
+  const htmlTemplate = verifyEmailTemplate(user, emailVerifyToken);
+  console.log(`[REGISTER] 📨 SEND EMAIL START -> Recipient email: ${user.email}`);
 
-    await sendEmail({
-      to: user.email,
-      subject: "⚡ Verify your BrainBlitz account",
-      html: htmlTemplate,
+  // Dispatch email asynchronously so SMTP cloud latency/retries never hang the HTTP response
+  sendEmail({
+    to: user.email,
+    subject: "⚡ Verify your BrainBlitz account",
+    html: htmlTemplate,
+  })
+    .then(() => {
+      console.log(`[REGISTER] ✅ SEND EMAIL SUCCESS -> Recipient email: ${user.email}`);
+    })
+    .catch((emailError) => {
+      console.error(`[REGISTER] ❌ SEND EMAIL ERROR -> Recipient email: ${user.email} | Reason:`, emailError.message);
     });
-    console.log(`[REGISTER] ✅ SEND EMAIL SUCCESS -> Recipient email: ${user.email}`);
-  } catch (emailError) {
-    console.error(`[REGISTER] ❌ SEND EMAIL ERROR -> Recipient email: ${user.email} | Reason:`, emailError.message);
-    // Rollback user creation so user is not locked out with duplicate error on retry
-    await userModel.findByIdAndDelete(user._id);
-    console.log(`[REGISTER] 🔄 Rollback complete: Deleted unverified user ${user._id}`);
-    throw new ApiError(500, "Registration failed: Unable to send verification email. Please try again later.");
-  }
 
   const createdUser = await userModel.findById(user._id).select("-password").lean();
   createdUser.actionToken = actionToken;
