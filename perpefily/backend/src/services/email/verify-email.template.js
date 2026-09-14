@@ -1,6 +1,7 @@
+const verifyEmailTemplate = (user, emailVerifyToken) => {
+  const backendUrl = (process.env.BACKEND_URL || "http://localhost:3000").replace(/\/+$/, "");
+  const verificationLink = `${backendUrl}/api/auth/verify/${emailVerifyToken}`;
 
-
- const verifyEmailTemplate = (user, emailVerifyToken) => {
   return `
   <!DOCTYPE html>
 <html lang="en">
@@ -46,7 +47,7 @@
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                 <tr>
                   <td align="center" style="padding:8px 0 28px 0;">
-                    <a href="${process.env.BACKEND_URL}/api/auth/verify/${emailVerifyToken}" target="_blank" style="background-color:#FF7A1A; color:#ffffff; text-decoration:none; font-size:15px; font-weight:600; padding:14px 36px; border-radius:8px; display:inline-block;">
+                    <a href="${verificationLink}" target="_blank" style="background-color:#FF7A1A; color:#ffffff; text-decoration:none; font-size:15px; font-weight:600; padding:14px 36px; border-radius:8px; display:inline-block;">
                       Verify Email
                     </a>
                   </td>
@@ -57,7 +58,7 @@
                 Or copy and paste this link into your browser:
               </p>
               <p style="margin:0 0 28px 0; font-size:13px; line-height:1.6; word-break:break-all;">
-                <a href="{{verification_link}}" style="color:#FF7A1A; text-decoration:none;">{{verification_link}}</a>
+                <a href="${verificationLink}" style="color:#FF7A1A; text-decoration:none;">${verificationLink}</a>
               </p>
 
               <p style="margin:0 0 8px 0; font-size:13px; line-height:1.6; color:#999999;">

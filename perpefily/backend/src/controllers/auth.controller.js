@@ -8,10 +8,12 @@ import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import crypto from "crypto";
 import { forgotPasswordTemplate } from "../services/email/forgot-password.template.js";
-import verifyEmail from "../services/email/verify-email.template.js";
+import verifyEmailTemplate from "../services/email/verify-email.template.js";
 
 export const registerController = asyncHandler(async (req, res) => {
   const { username, email, password } = req.body;
+  console.log(`[REGISTER START] Received registration request for email: ${email}, username: ${username}`);
+
   const userExists = await userModel.findOne({
     $or: [{ email }, { username }],
   });
@@ -32,6 +34,14 @@ export const registerController = asyncHandler(async (req, res) => {
   }
 
   const user = await userModel.create({ username, email, password });
+  console.log(`[REGISTER] User created in database with ID: ${user._id}`);
+
+  const emailVerifyToken = jwt.sign(
+    { email: user.email },
+    process.env.JWT_SECRET_KEY,
+    { expiresIn: "1d" }
+  );
+  console.log(`[REGISTER] Verification token generated for: ${user.email}`);
 
   const actionToken = jwt.sign(
     { id: user._id, email: user.email, action: 'send_verification' },
@@ -39,7 +49,23 @@ export const registerController = asyncHandler(async (req, res) => {
     { expiresIn: "15m" }
   );
 
-    await verifyEmail(user ,actionToken )
+  try {
+    console.log(`[REGISTER] 📨 SEND EMAIL START -> Recipient email: ${user.email}`);
+    const htmlTemplate = verifyEmailTemplate(user, emailVerifyToken);
+
+    await sendEmail({
+      to: user.email,
+      subject: "⚡ Verify your BrainBlitz account",
+      html: htmlTemplate,
+    });
+    console.log(`[REGISTER] ✅ SEND EMAIL SUCCESS -> Recipient email: ${user.email}`);
+  } catch (emailError) {
+    console.error(`[REGISTER] ❌ SEND EMAIL ERROR -> Recipient email: ${user.email} | Reason:`, emailError.message);
+    // Rollback user creation so user is not locked out with duplicate error on retry
+    await userModel.findByIdAndDelete(user._id);
+    console.log(`[REGISTER] 🔄 Rollback complete: Deleted unverified user ${user._id}`);
+    throw new ApiError(500, "Registration failed: Unable to send verification email. Please try again later.");
+  }
 
   const createdUser = await userModel.findById(user._id).select("-password").lean();
   createdUser.actionToken = actionToken;
@@ -54,7 +80,7 @@ export const registerController = asyncHandler(async (req, res) => {
       new ApiResponse(
         201,
         createdUser,
-        "User registered successfully. Please send verification email.",
+        "User registered successfully. Verification email sent.",
       ),
     );
 });
@@ -91,13 +117,18 @@ export const sendVerificationEmailController = asyncHandler(async (req, res) => 
     { expiresIn: "1d" },
   );
 
-  sendEmail({
-    to: user.email,
-    subject: "🎉 Welcome to Perplexity AI",
-    html: verifyEmail(user, emailVerifyToken),
-  }).catch((emailError) => {
-    console.error(`Failed to send verification email: ${emailError.message}`);
-  });
+  try {
+    console.log(`[RESEND EMAIL START] Recipient email: ${user.email}`);
+    await sendEmail({
+      to: user.email,
+      subject: "⚡ Verify your BrainBlitz account",
+      html: verifyEmailTemplate(user, emailVerifyToken),
+    });
+    console.log(`[RESEND EMAIL SUCCESS] Recipient email: ${user.email}`);
+  } catch (emailError) {
+    console.error(`[RESEND EMAIL ERROR] Recipient email: ${user.email} | Reason:`, emailError.message);
+    throw new ApiError(500, "Failed to send verification email. Please try again later.");
+  }
 
   return res.status(200).json(new ApiResponse(200, {}, "Verification email sent successfully"));
 });
