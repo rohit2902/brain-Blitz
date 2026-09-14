@@ -98,7 +98,11 @@ app.get("/", (req, res) => {
 });
 
 // Handle undefined routes
-app.use("*name", (req, res) => {
+// app.use("*name", (req, res) => {
+//   res.status(404).json({ success: false, message: "API Route Not Found" });
+// });
+
+app.use((req, res) => {
   res.status(404).json({ success: false, message: "API Route Not Found" });
 });
 
